@@ -1,11 +1,50 @@
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QStackedWidget, QGridLayout, QLineEdit, QFormLayout, QSpinBox, QTimeEdit, QDateEdit
+    QPushButton, QStackedWidget, QGridLayout, QLineEdit,
+    QFormLayout, QSpinBox, QTimeEdit, QDateEdit, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer, QDate, QTime
 from datetime import datetime
 import random
+
+
+class LoginPage(QWidget):
+    def __init__(self, switch_callback):
+        super().__init__()
+        self.switch_callback = switch_callback
+        layout = QVBoxLayout()
+        layout.setContentsMargins(150, 150, 150, 150)
+
+        title = QLabel("User Login")
+        title.setStyleSheet("font-size: 28px; font-weight: bold;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.username = QLineEdit()
+        self.username.setPlaceholderText("Username")
+
+        self.password = QLineEdit()
+        self.password.setPlaceholderText("Password")
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.login_button = QPushButton("Sign In")
+        self.login_button.setStyleSheet("padding: 10px; font-size: 16px;")
+        self.login_button.clicked.connect(self.handle_login)
+
+        layout.addWidget(title)
+        layout.addStretch()
+        layout.addWidget(self.username)
+        layout.addWidget(self.password)
+        layout.addWidget(self.login_button)
+        layout.addStretch()
+
+        self.setLayout(layout)
+
+    def handle_login(self):
+        if self.username.text() == "SWE project" and self.password.text() == "Parking":
+            self.switch_callback()
+        else:
+            QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
 
 
 class LiveView(QWidget):
@@ -14,7 +53,7 @@ class LiveView(QWidget):
         layout = QGridLayout()
         layout.setSpacing(10)
         self.slots = []
-        self.statuses = [False] * 20  # False = free, True = occupied
+        self.statuses = [False] * 20
 
         for i in range(20):
             label = QLabel(f"Slot {i + 1}")
@@ -102,7 +141,7 @@ class ReservationPage(QWidget):
         self.setLayout(layout)
 
 
-class UserInterface(QWidget):
+class UserPanel(QWidget):
     def __init__(self):
         super().__init__()
         main_layout = QHBoxLayout()
@@ -130,18 +169,14 @@ class UserInterface(QWidget):
         """
 
         liveview_btn = QPushButton("Live View")
-        liveview_btn.setStyleSheet(button_style)
         payment_btn = QPushButton("Payment")
-        payment_btn.setStyleSheet(button_style)
         profile_btn = QPushButton("Profile")
-        profile_btn.setStyleSheet(button_style)
         reservation_btn = QPushButton("Reservation")
-        reservation_btn.setStyleSheet(button_style)
 
-        sidebar_layout.addWidget(liveview_btn)
-        sidebar_layout.addWidget(payment_btn)
-        sidebar_layout.addWidget(profile_btn)
-        sidebar_layout.addWidget(reservation_btn)
+        for btn in [liveview_btn, payment_btn, profile_btn, reservation_btn]:
+            btn.setStyleSheet(button_style)
+            sidebar_layout.addWidget(btn)
+
         sidebar_layout.addStretch()
 
         # Pages
@@ -166,9 +201,27 @@ class UserInterface(QWidget):
         self.setLayout(main_layout)
 
 
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.stack = QStackedWidget()
+        self.login_page = LoginPage(self.load_user_panel)
+        self.user_panel = UserPanel()
+
+        self.stack.addWidget(self.login_page)
+        self.stack.addWidget(self.user_panel)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.stack)
+        self.setLayout(layout)
+
+    def load_user_panel(self):
+        self.stack.setCurrentWidget(self.user_panel)
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = UserInterface()
+    window = MainWindow()
     window.setWindowTitle("Parking Lot - User")
     window.resize(1000, 700)
     window.show()
