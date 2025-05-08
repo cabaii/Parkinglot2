@@ -1,30 +1,65 @@
 import sys
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QStackedWidget, QGridLayout, QComboBox,
-    QLineEdit, QDateTimeEdit, QTableWidget, QTableWidgetItem, QFrame,
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QStackedWidget, QGridLayout, QTableWidget, QTableWidgetItem, QLineEdit,
+    QFrame
 )
-from PyQt6.QtGui import QColor, QPalette, QDesktopServices
-from PyQt6.QtCore import Qt, QDateTime, QTimer, QUrl
+from PyQt6.QtCore import Qt, QTimer
 
 CAR_TYPES = ["Sedan", "SUV", "Truck", "Van", "Coupe"]
-
 
 def generate_license_plate():
     return "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=3)) + \
            "".join(random.choices("0123456789", k=3))
 
-
 def generate_car_type():
     return random.choice(CAR_TYPES)
+
+
+class LoginPage(QWidget):
+    def __init__(self, switch_function):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        title = QLabel("Admin Login")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
+
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Username")
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Password")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet("color: red;")
+
+        login_button = QPushButton("Sign In")
+        login_button.clicked.connect(self.check_credentials)
+
+        layout.addWidget(title)
+        layout.addWidget(self.username_input)
+        layout.addWidget(self.password_input)
+        layout.addWidget(self.error_label)
+        layout.addWidget(login_button)
+
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setContentsMargins(100, 150, 100, 150)
+        self.setLayout(layout)
+        self.switch_function = switch_function
+
+    def check_credentials(self):
+        if self.username_input.text() == "SWE admin" and self.password_input.text() == "Parking":
+            self.switch_function()
+        else:
+            self.error_label.setText("Invalid credentials")
 
 
 class Dashboard(QWidget):
     def __init__(self, liveview_page):
         super().__init__()
-        self.liveview_page = liveview_page
         layout = QGridLayout()
         layout.setHorizontalSpacing(20)
         layout.setVerticalSpacing(5)
@@ -42,6 +77,7 @@ class Dashboard(QWidget):
             layout.addWidget(box, i // 2, i % 2)
 
         self.setLayout(layout)
+        self.liveview_page = liveview_page
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self.update_stats)
         self.update_timer.start(2000)
@@ -75,9 +111,7 @@ class Dashboard(QWidget):
 
         title_label = QLabel(title)
         title_label.setObjectName("title")
-
         value_label.setObjectName("value")
-
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -100,12 +134,12 @@ class Dashboard(QWidget):
 class LiveView(QWidget):
     def __init__(self, history_page):
         super().__init__()
-        self.history_page = history_page
         layout = QGridLayout()
         layout.setSpacing(10)
         self.slots = []
         self.slot_statuses = []
         self.cars_today = 0
+        self.history_page = history_page
 
         for i in range(20):
             slot_label = QLabel(f"Slot {i + 1}")
@@ -129,10 +163,8 @@ class LiveView(QWidget):
                     car_type = generate_car_type()
                     entry_time = datetime.now()
                     self.slot_statuses[i] = {
-                        "occupied": True,
-                        "plate": plate,
-                        "type": car_type,
-                        "entry": entry_time
+                        "occupied": True, "plate": plate,
+                        "type": car_type, "entry": entry_time
                     }
                     self.history_page.add_entry(plate, car_type, entry_time)
                     self.cars_today += 1
@@ -146,59 +178,19 @@ class LiveView(QWidget):
             status = self.slot_statuses[i]
             if status['occupied']:
                 slot_label.setText(f"{status['plate']}\n{status['type']}")
-                slot_label.setStyleSheet("""
-                    background-color: red;
-                    color: white;
-                    border-radius: 6px;
-                    font-weight: bold;
-                """)
+                slot_label.setStyleSheet("background-color: red; color: white; border-radius: 6px; font-weight: bold;")
             else:
                 slot_label.setText(f"Slot {i + 1}")
-                slot_label.setStyleSheet("""
-                    background-color: green;
-                    color: white;
-                    border-radius: 6px;
-                    font-weight: bold;
-                """)
+                slot_label.setStyleSheet("background-color: green; color: white; border-radius: 6px; font-weight: bold;")
 
 
 class HistoryPage(QWidget):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("""
-            QWidget { background-color: #f0f4f8; }
-            QLineEdit, QDateTimeEdit {
-                padding: 8px;
-                font-size: 14px;
-                border: 2px solid #0078d7;
-                border-radius: 6px;
-                background-color: white;
-                color: black;
-            }
-            QTableWidget {
-                background-color: white;
-                border-radius: 6px;
-                border: 1px solid #0078d7;
-                font-size: 14px;
-            }
-            QHeaderView::section {
-                background-color: #0078d7;
-                color: white;
-                padding: 6px;
-                font-weight: bold;
-            }
-        """)
-
         layout = QVBoxLayout()
         self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["License Plate", "Car Type", "Entry Time", "Exit Time", "Status"])
-        self.table.setColumnWidth(0, 180)
-        self.table.setColumnWidth(1, 150)
-        self.table.setColumnWidth(2, 180)
-        self.table.setColumnWidth(3, 180)
-        self.table.setColumnWidth(4, 100)
-
         layout.addWidget(self.table)
         self.entries = {}
         self.setLayout(layout)
@@ -223,50 +215,24 @@ class HistoryPage(QWidget):
 class ParkingDashboard(QWidget):
     def __init__(self):
         super().__init__()
-        main_layout = QHBoxLayout()
-        left_widget = QWidget()
-        left_widget.setStyleSheet("""
-            background-color: #0078d7;
-            color: white;
-        """)
-        left_layout = QVBoxLayout(left_widget)
-        heading = QLabel("🅿️ Parking System")
-        heading.setStyleSheet("font-size: 30px; font-weight: bold; color: white;")
-        left_layout.addWidget(heading)
+        layout = QHBoxLayout()
+        sidebar = QVBoxLayout()
+        sidebar.setSpacing(10)
 
-        button_style = """
-            QPushButton {
-                background-color: transparent;
-                color: white;
-                font-size: 18px;
-                padding: 12px 8px;
-                border: none;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #005fa3;
-            }
-        """
+        heading = QLabel("🅿️ Parking System")
+        heading.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        heading.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         dashboard_btn = QPushButton("Dashboard")
-        dashboard_btn.setStyleSheet(button_style)
         liveview_btn = QPushButton("Live View")
-        liveview_btn.setStyleSheet(button_style)
         history_btn = QPushButton("History")
-        history_btn.setStyleSheet(button_style)
-
-        left_layout.addWidget(dashboard_btn)
-        left_layout.addWidget(liveview_btn)
-        left_layout.addWidget(history_btn)
-        left_layout.addStretch()
+        for btn in (dashboard_btn, liveview_btn, history_btn):
+            btn.setStyleSheet("background-color: #005fa3; color: white; padding: 10px; font-size: 16px;")
 
         self.stack = QStackedWidget()
-        self.stack.setStyleSheet("background-color: white;")
-
         self.history_page = HistoryPage()
         self.liveview_page = LiveView(self.history_page)
         self.dashboard_page = Dashboard(self.liveview_page)
-
         self.stack.addWidget(self.dashboard_page)
         self.stack.addWidget(self.liveview_page)
         self.stack.addWidget(self.history_page)
@@ -275,15 +241,37 @@ class ParkingDashboard(QWidget):
         liveview_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.liveview_page))
         history_btn.clicked.connect(lambda: self.stack.setCurrentWidget(self.history_page))
 
-        main_layout.addWidget(left_widget, 1)
-        main_layout.addWidget(self.stack, 3)
-        self.setLayout(main_layout)
+        sidebar.addWidget(heading)
+        sidebar.addWidget(dashboard_btn)
+        sidebar.addWidget(liveview_btn)
+        sidebar.addWidget(history_btn)
+        sidebar.addStretch()
+
+        sidebar_widget = QWidget()
+        sidebar_widget.setLayout(sidebar)
+        sidebar_widget.setStyleSheet("background-color: #0078d7;")
+
+        layout.addWidget(sidebar_widget, 1)
+        layout.addWidget(self.stack, 3)
+        self.setLayout(layout)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ParkingDashboard()
-    window.setWindowTitle("Parking Lot Management")
-    window.resize(1000, 700)
-    window.show()
+
+    # Top-level stacked widget
+    top_level_stack = QStackedWidget()
+
+    # Create dashboard and login page
+    dashboard = ParkingDashboard()
+    login_page = LoginPage(lambda: top_level_stack.setCurrentWidget(dashboard))
+
+    top_level_stack.addWidget(login_page)
+    top_level_stack.addWidget(dashboard)
+    top_level_stack.setCurrentWidget(login_page)
+
+    top_level_stack.setWindowTitle("Admin Dashboard - Parking Lot Management")
+    top_level_stack.resize(1000, 700)
+    top_level_stack.show()
+
     sys.exit(app.exec())
